@@ -3,7 +3,6 @@ package handlers
 import (
 	"net/http"
 
-	"firebase.google.com/go/v4/messaging"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -13,10 +12,10 @@ import (
 	"github.com/findr-app/findr-backend/internal/model"
 )
 
-func CreateComment(pool *pgxpool.Pool, log *zap.Logger, _ *messaging.Client) gin.HandlerFunc {
+func CreateComment(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		projectID := c.Param("id")
-		userUID := middleware.GetUserUID(c)
+		userUUID := middleware.GetUserUID(c)
 		userID := middleware.GetUserID(c)
 
 		var req model.CreateCommentRequest
@@ -34,13 +33,13 @@ func CreateComment(pool *pgxpool.Pool, log *zap.Logger, _ *messaging.Client) gin
 
 		var comment model.ProjectComment
 		err := pool.QueryRow(c.Request.Context(),
-			`INSERT INTO project_comments (project_id, sender_uid, sender_id, sender_name, sender_image_url,
+			`INSERT INTO project_comments (project_id, sender_uuid, sender_id, sender_name, sender_image_url,
 			  text, nesting_level, parent_comment_id, root_comment_id, is_top_level)
 			 VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-			 RETURNING id, project_id, sender_uid, sender_name, text, nesting_level, is_top_level, created_at`,
-			projectID, userUID, userID, senderName, senderImage,
+			 RETURNING id, project_id, sender_uuid, sender_name, text, nesting_level, is_top_level, created_at`,
+			projectID, userUUID, userID, senderName, senderImage,
 			req.Text, req.NestingLevel, req.ParentCommentID, req.RootCommentID, isTopLevel,
-		).Scan(&comment.ID, &comment.ProjectID, &comment.SenderUID, &comment.SenderName,
+		).Scan(&comment.ID, &comment.ProjectID, &comment.SenderUUID, &comment.SenderName,
 			&comment.Text, &comment.NestingLevel, &comment.IsTopLevel, &comment.CreatedAt)
 		if err != nil {
 			log.Error("create comment failed", zap.Error(err))
@@ -48,9 +47,9 @@ func CreateComment(pool *pgxpool.Pool, log *zap.Logger, _ *messaging.Client) gin
 			return
 		}
 
-		// Increment comments_count
+		// Increment comments_count in posts table
 		_, _ = pool.Exec(c.Request.Context(),
-			`UPDATE projects SET comments_count = comments_count + 1 WHERE id = $1::uuid`, projectID)
+			`UPDATE posts SET comments_count = comments_count + 1 WHERE id = $1::uuid`, projectID)
 
 		// Increment parent reply_count if reply
 		if req.ParentCommentID != nil {
@@ -71,9 +70,9 @@ func GetComments(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		params.SetDefaults()
 
 		rows, err := pool.Query(c.Request.Context(),
-			`SELECT id, project_id, sender_uid, sender_id, sender_name, sender_image_url,
+			`SELECT id, project_id, sender_uuid, sender_id, sender_name, sender_image_url,
 			        text, nesting_level, parent_comment_id, root_comment_id, is_top_level,
-			        reply_count, likes, likes_count, created_at
+			        reply_count, likes_count, created_at
 			 FROM project_comments
 			 WHERE project_id = $1::uuid AND is_top_level = true
 			 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
@@ -96,9 +95,9 @@ func GetReplies(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		commentID := c.Param("commentId")
 
 		rows, err := pool.Query(c.Request.Context(),
-			`SELECT id, project_id, sender_uid, sender_id, sender_name, sender_image_url,
+			`SELECT id, project_id, sender_uuid, sender_id, sender_name, sender_image_url,
 			        text, nesting_level, parent_comment_id, root_comment_id, is_top_level,
-			        reply_count, likes, likes_count, created_at
+			        reply_count, likes_count, created_at
 			 FROM project_comments
 			 WHERE parent_comment_id = $1 OR root_comment_id = $1
 			 ORDER BY created_at ASC`,
@@ -119,7 +118,7 @@ func GetReplies(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 func UpdateComment(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		commentID := c.Param("commentId")
-		userUID := middleware.GetUserUID(c)
+		userUUID := middleware.GetUserUID(c)
 
 		var req struct {
 			Text string `json:"text" binding:"required"`
@@ -130,8 +129,8 @@ func UpdateComment(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		}
 
 		tag, err := pool.Exec(c.Request.Context(),
-			`UPDATE project_comments SET text = $1 WHERE id = $2::uuid AND sender_uid = $3`,
-			req.Text, commentID, userUID,
+			`UPDATE project_comments SET text = $1 WHERE id = $2::uuid AND sender_uuid = $3`,
+			req.Text, commentID, userUUID,
 		)
 		if err != nil {
 			log.Error("update comment failed", zap.Error(err))
@@ -150,13 +149,13 @@ func UpdateComment(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 func DeleteComment(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		commentID := c.Param("commentId")
-		userUID := middleware.GetUserUID(c)
+		userUUID := middleware.GetUserUID(c)
 
 		// Get project_id before deleting to update count
 		var projectID string
 		err := pool.QueryRow(c.Request.Context(),
-			`SELECT project_id FROM project_comments WHERE id = $1::uuid AND sender_uid = $2`,
-			commentID, userUID,
+			`SELECT project_id FROM project_comments WHERE id = $1::uuid AND sender_uuid = $2`,
+			commentID, userUUID,
 		).Scan(&projectID)
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, model.ErrorResponse{Error: "comment not found or not authorized"})
@@ -164,8 +163,8 @@ func DeleteComment(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		}
 
 		_, err = pool.Exec(c.Request.Context(),
-			`DELETE FROM project_comments WHERE id = $1::uuid AND sender_uid = $2`,
-			commentID, userUID,
+			`DELETE FROM project_comments WHERE id = $1::uuid AND sender_uuid = $2`,
+			commentID, userUUID,
 		)
 		if err != nil {
 			log.Error("delete comment failed", zap.Error(err))
@@ -174,7 +173,7 @@ func DeleteComment(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		}
 
 		_, _ = pool.Exec(c.Request.Context(),
-			`UPDATE projects SET comments_count = GREATEST(comments_count - 1, 0) WHERE id = $1::uuid`, projectID)
+			`UPDATE posts SET comments_count = GREATEST(comments_count - 1, 0) WHERE id = $1::uuid`, projectID)
 
 		c.JSON(http.StatusOK, model.SuccessResponse{Message: "comment deleted"})
 	}
@@ -185,9 +184,9 @@ func scanComments(rows pgx.Rows, log *zap.Logger) []model.ProjectComment {
 	for rows.Next() {
 		var cm model.ProjectComment
 		if err := rows.Scan(
-			&cm.ID, &cm.ProjectID, &cm.SenderUID, &cm.SenderID, &cm.SenderName, &cm.SenderImageURL,
+			&cm.ID, &cm.ProjectID, &cm.SenderUUID, &cm.SenderID, &cm.SenderName, &cm.SenderImageURL,
 			&cm.Text, &cm.NestingLevel, &cm.ParentCommentID, &cm.RootCommentID, &cm.IsTopLevel,
-			&cm.ReplyCount, &cm.Likes, &cm.LikesCount, &cm.CreatedAt,
+			&cm.ReplyCount, &cm.LikesCount, &cm.CreatedAt,
 		); err != nil {
 			log.Error("scan comment failed", zap.Error(err))
 			continue

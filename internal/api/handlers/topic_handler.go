@@ -13,7 +13,7 @@ import (
 func ListTopics(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rows, err := pool.Query(c.Request.Context(),
-			`SELECT id, firebase_id, topic, enabled FROM topics ORDER BY topic`)
+			`SELECT id, topic, enabled FROM topics ORDER BY topic`)
 		if err != nil {
 			log.Error("list topics failed", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "failed to list topics"})
@@ -24,7 +24,7 @@ func ListTopics(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		var topics []model.Topic
 		for rows.Next() {
 			var t model.Topic
-			if err := rows.Scan(&t.ID, &t.FirebaseID, &t.Topic, &t.Enabled); err != nil {
+			if err := rows.Scan(&t.ID, &t.Topic, &t.Enabled); err != nil {
 				continue
 			}
 			topics = append(topics, t)

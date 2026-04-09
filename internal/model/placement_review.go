@@ -9,8 +9,7 @@ import (
 
 type PlacementReview struct {
 	ID                   uuid.UUID       `json:"id" db:"id"`
-	FirebaseID           *string         `json:"firebase_id,omitempty" db:"firebase_id"`
-	SubmittedByUID       *string         `json:"submitted_by_uid,omitempty" db:"submitted_by_uid"`
+	SubmittedByUUID      *string         `json:"submitted_by_uuid,omitempty" db:"submitted_by_uuid"`
 	SubmittedByID        *uuid.UUID      `json:"submitted_by_id,omitempty" db:"submitted_by_id"`
 	SubmittedByName      string          `json:"submitted_by_name" db:"submitted_by_name"`
 	SubmittedAt          time.Time       `json:"submitted_at" db:"submitted_at"`

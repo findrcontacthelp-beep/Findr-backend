@@ -19,7 +19,7 @@ func GetFeed(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 				id::text,
 				type,
 				coalesce(author_name, ''),
-				coalesce(author_uid, ''),
+				coalesce(author_uuid, ''),
 				coalesce(title, ''),
 				coalesce(description, ''),
 				coalesce(tags, '{}'),
@@ -36,7 +36,7 @@ func GetFeed(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 				coalesce(views_count, 0),
 				created_at,
 				updated_at
-			FROM public.projects
+			FROM public.posts
 			WHERE lower(type) <> 'live'
 			ORDER BY created_at DESC`)
 		if err != nil {
@@ -56,7 +56,7 @@ func GetFeed(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 				&item.ID,
 				&item.Type,
 				&item.AuthorName,
-				&item.AuthorUID,
+				&item.AuthorUUID,
 				&item.Title,
 				&item.Description,
 				&item.Tags,
@@ -113,7 +113,7 @@ func GetFeed(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 func normalizeFeedType(value string) string {
 	normalized := strings.TrimSpace(strings.ToLower(value))
 	switch normalized {
-	case "post", "project", "event", "bug", "announcement", "poll":
+	case "post", "project", "bug", "poll":
 		return normalized
 	default:
 		return "post"

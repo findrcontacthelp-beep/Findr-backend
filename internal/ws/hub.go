@@ -26,8 +26,8 @@ func (h *Hub) Register(client *Client) {
 	if _, ok := h.rooms[client.ChatID]; !ok {
 		h.rooms[client.ChatID] = make(map[string]*Client)
 	}
-	h.rooms[client.ChatID][client.UserUID] = client
-	h.log.Info("client registered", zap.String("chatID", client.ChatID), zap.String("userUID", client.UserUID))
+	h.rooms[client.ChatID][client.UserUUID] = client
+	h.log.Info("client registered", zap.String("chatID", client.ChatID), zap.String("userUUID", client.UserUUID))
 }
 
 func (h *Hub) Unregister(client *Client) {
@@ -35,15 +35,15 @@ func (h *Hub) Unregister(client *Client) {
 	defer h.mu.Unlock()
 
 	if room, ok := h.rooms[client.ChatID]; ok {
-		if _, exists := room[client.UserUID]; exists {
-			delete(room, client.UserUID)
+		if _, exists := room[client.UserUUID]; exists {
+			delete(room, client.UserUUID)
 			close(client.Send)
 			if len(room) == 0 {
 				delete(h.rooms, client.ChatID)
 			}
 		}
 	}
-	h.log.Info("client unregistered", zap.String("chatID", client.ChatID), zap.String("userUID", client.UserUID))
+	h.log.Info("client unregistered", zap.String("chatID", client.ChatID), zap.String("userUUID", client.UserUUID))
 }
 
 func (h *Hub) BroadcastToChat(chatID string, data []byte) {
@@ -55,18 +55,18 @@ func (h *Hub) BroadcastToChat(chatID string, data []byte) {
 			select {
 			case client.Send <- data:
 			default:
-				h.log.Warn("client send buffer full, dropping message", zap.String("userUID", client.UserUID))
+				h.log.Warn("client send buffer full, dropping message", zap.String("userUUID", client.UserUUID))
 			}
 		}
 	}
 }
 
-func (h *Hub) IsUserOnline(chatID, userUID string) bool {
+func (h *Hub) IsUserOnline(chatID, userUUID string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
 	if room, ok := h.rooms[chatID]; ok {
-		_, exists := room[userUID]
+		_, exists := room[userUUID]
 		return exists
 	}
 	return false
@@ -78,8 +78,8 @@ func (h *Hub) GetOnlineUsers(chatID string) []string {
 
 	var users []string
 	if room, ok := h.rooms[chatID]; ok {
-		for uid := range room {
-			users = append(users, uid)
+		for uuidVal := range room {
+			users = append(users, uuidVal)
 		}
 	}
 	return users

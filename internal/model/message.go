@@ -9,12 +9,11 @@ import (
 
 type ChatMessage struct {
 	ID          uuid.UUID       `json:"id" db:"id"`
-	FirebaseID  *string         `json:"firebase_id,omitempty" db:"firebase_id"`
-	MessageID   *string         `json:"message_id,omitempty" db:"message_id"`
-	ChatID      uuid.UUID       `json:"chat_id" db:"chat_id"`
-	SenderUID   *string         `json:"sender_uid,omitempty" db:"sender_uid"`
-	SenderID    *uuid.UUID      `json:"sender_id,omitempty" db:"sender_id"`
-	ReceiverUID *string         `json:"receiver_uid,omitempty" db:"receiver_uid"`
+	MessageID    *string         `json:"message_id,omitempty" db:"message_id"`
+	ChatID       uuid.UUID       `json:"chat_id" db:"chat_id"`
+	SenderUUID   *string         `json:"sender_uuid,omitempty" db:"sender_uuid"`
+	SenderID     *uuid.UUID      `json:"sender_id,omitempty" db:"sender_id"`
+	ReceiverUUID *string         `json:"receiver_uuid,omitempty" db:"receiver_uuid"`
 	Message     string          `json:"message" db:"message"`
 	Status      string          `json:"status" db:"status"`
 	ReplyTo     json.RawMessage `json:"reply_to,omitempty" db:"reply_to"`
@@ -23,9 +22,9 @@ type ChatMessage struct {
 }
 
 type ReplyTo struct {
-	MessageID string `json:"message_id"`
-	Text      string `json:"text"`
-	SenderUID string `json:"sender_uid"`
+	MessageID  string `json:"message_id"`
+	Text       string `json:"text"`
+	SenderUUID string `json:"sender_uuid"`
 }
 
 type MessageMedia struct {
@@ -36,9 +35,9 @@ type MessageMedia struct {
 }
 
 type SendMessageRequest struct {
-	Message     string        `json:"message" binding:"required"`
-	ReceiverUID *string       `json:"receiver_uid"`
-	ReplyTo     *ReplyTo      `json:"reply_to"`
+	Message      string        `json:"message" binding:"required"`
+	ReceiverUUID *string       `json:"receiver_uuid"`
+	ReplyTo      *ReplyTo      `json:"reply_to"`
 	Media       *MessageMedia `json:"media"`
 }
 
@@ -48,9 +47,9 @@ type WSMessage struct {
 }
 
 type WSChatMessage struct {
-	ChatID      string        `json:"chat_id"`
-	Message     string        `json:"message"`
-	ReceiverUID *string       `json:"receiver_uid,omitempty"`
-	ReplyTo     *ReplyTo      `json:"reply_to,omitempty"`
+	ChatID       string        `json:"chat_id"`
+	Message      string        `json:"message"`
+	ReceiverUUID *string       `json:"receiver_uuid,omitempty"`
+	ReplyTo      *ReplyTo      `json:"reply_to,omitempty"`
 	Media       *MessageMedia `json:"media,omitempty"`
 }

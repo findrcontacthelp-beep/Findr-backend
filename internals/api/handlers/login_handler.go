@@ -42,7 +42,7 @@ func Login(pool *pgxpool.Pool, log *zap.Logger, jwtSecret string) gin.HandlerFun
 			}
 		}
 
-		token, err := issueAccessToken(u.FirebaseUID, jwtSecret)
+		token, err := issueAccessToken(u.UserUUID, jwtSecret)
 		if err != nil {
 			log.Error("issue access token failed", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "failed to login"})

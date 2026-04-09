@@ -8,8 +8,7 @@ import (
 
 type Enrollment struct {
 	ID             uuid.UUID  `json:"id" db:"id"`
-	FirebaseID     *string    `json:"firebase_id,omitempty" db:"firebase_id"`
-	UserUID        *string    `json:"user_uid,omitempty" db:"user_uid"`
+	UserUUID       *string    `json:"user_uuid,omitempty" db:"user_uuid"`
 	UserID         uuid.UUID  `json:"user_id" db:"user_id"`
 	UserName       string     `json:"user_name" db:"user_name"`
 	UserProfilePic string     `json:"user_profile_pic" db:"user_profile_pic"`

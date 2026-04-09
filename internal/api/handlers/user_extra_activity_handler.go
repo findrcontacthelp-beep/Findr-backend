@@ -45,7 +45,7 @@ func GetExtraActivities(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		userID := c.Param("id")
 
 		rows, err := pool.Query(c.Request.Context(),
-			`SELECT id, firebase_id, user_id, name, domain, link, description, media
+			`SELECT id, user_id, name, domain, link, description, media
 			 FROM user_extra_activities WHERE user_id = $1::uuid`, userID,
 		)
 		if err != nil {
@@ -58,7 +58,7 @@ func GetExtraActivities(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		var activities []model.UserExtraActivity
 		for rows.Next() {
 			var a model.UserExtraActivity
-			if err := rows.Scan(&a.ID, &a.FirebaseID, &a.UserID, &a.Name, &a.Domain,
+			if err := rows.Scan(&a.ID, &a.UserID, &a.Name, &a.Domain,
 				&a.Link, &a.Description, &a.Media); err != nil {
 				continue
 			}

@@ -17,7 +17,7 @@ func GetNotifications(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		userID := middleware.GetUserID(c)
 
 		rows, err := pool.Query(c.Request.Context(),
-			`SELECT id, user_id, firebase_key, last_notified_at
+			`SELECT id, user_id, last_notified_at
 			 FROM user_notifications WHERE user_id = $1 ORDER BY last_notified_at DESC`, userID,
 		)
 		if err != nil {
@@ -30,7 +30,7 @@ func GetNotifications(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		var notifications []model.UserNotification
 		for rows.Next() {
 			var n model.UserNotification
-			if err := rows.Scan(&n.ID, &n.UserID, &n.FirebaseKey, &n.LastNotifiedAt); err != nil {
+			if err := rows.Scan(&n.ID, &n.UserID, &n.LastNotifiedAt); err != nil {
 				continue
 			}
 			notifications = append(notifications, n)

@@ -16,7 +16,7 @@ import (
 
 func CreateOrGetChat(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userUID := middleware.GetUserUID(c)
+		userUUID := middleware.GetUserUID(c)
 		userID := middleware.GetUserID(c)
 
 		var req model.CreateChatRequest
@@ -26,21 +26,21 @@ func CreateOrGetChat(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		}
 
 		// Include current user in participants
-		allUIDs := append(req.ParticipantUIDs, userUID)
-		sort.Strings(allUIDs)
-		allUIDs = uniqueStrings(allUIDs)
+		allUUIDs := append(req.ParticipantUUIDs, userUUID)
+		sort.Strings(allUUIDs)
+		allUUIDs = uniqueStrings(allUUIDs)
 
 		// Check if chat already exists with these exact participants
-		for _, uid := range allUIDs {
-			if uid == userUID {
+		for _, uuidVal := range allUUIDs {
+			if uuidVal == userUUID {
 				continue
 			}
 			var chatID uuid.UUID
 			err := pool.QueryRow(c.Request.Context(),
 				`SELECT cp1.chat_id FROM chat_participants cp1
 				 JOIN chat_participants cp2 ON cp1.chat_id = cp2.chat_id
-				 WHERE cp1.user_uid = $1 AND cp2.user_uid = $2
-				 LIMIT 1`, userUID, uid,
+				 WHERE cp1.user_uuid = $1 AND cp2.user_uuid = $2
+				 LIMIT 1`, userUUID, uuidVal,
 			).Scan(&chatID)
 			if err == nil {
 				var chat model.Chat
@@ -65,20 +65,20 @@ func CreateOrGetChat(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		}
 
 		// Add participants
-		for _, uid := range allUIDs {
+		for _, uuidVal := range allUUIDs {
 			var pUserID *uuid.UUID
 			var id uuid.UUID
 			if err := pool.QueryRow(c.Request.Context(),
-				`SELECT id FROM users WHERE firebase_uid = $1`, uid).Scan(&id); err == nil {
+				`SELECT id FROM users WHERE user_uuid = $1`, uuidVal).Scan(&id); err == nil {
 				pUserID = &id
 			}
 
 			_, _ = pool.Exec(c.Request.Context(),
-				`INSERT INTO chat_participants (chat_id, user_uid, user_id) VALUES ($1, $2, $3)`,
-				chat.ID, uid, pUserID,
+				`INSERT INTO chat_participants (chat_id, user_uuid, user_id) VALUES ($1, $2, $3)`,
+				chat.ID, uuidVal, pUserID,
 			)
 		}
-		_ = userID // used for lookup above
+		_ = userID // used for lookup above logic if needed
 
 		c.JSON(http.StatusCreated, chat)
 	}
@@ -86,14 +86,14 @@ func CreateOrGetChat(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 
 func GetMyChats(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userUID := middleware.GetUserUID(c)
+		userUUID := middleware.GetUserUID(c)
 
 		rows, err := pool.Query(c.Request.Context(),
 			`SELECT c.id, c.last_message, c.last_message_at, c.unread_messages, c.created_at
 			 FROM chats c
 			 JOIN chat_participants cp ON cp.chat_id = c.id
-			 WHERE cp.user_uid = $1
-			 ORDER BY COALESCE(c.last_message_at, c.created_at) DESC`, userUID,
+			 WHERE cp.user_uuid = $1
+			 ORDER BY COALESCE(c.last_message_at, c.created_at) DESC`, userUUID,
 		)
 		if err != nil {
 			log.Error("get my chats failed", zap.Error(err))
@@ -118,13 +118,13 @@ func GetMyChats(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 func GetChatDetail(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		chatID := c.Param("id")
-		userUID := middleware.GetUserUID(c)
+		userUUID := middleware.GetUserUID(c)
 
 		// Verify participant
 		var exists bool
 		err := pool.QueryRow(c.Request.Context(),
-			`SELECT EXISTS(SELECT 1 FROM chat_participants WHERE chat_id = $1::uuid AND user_uid = $2)`,
-			chatID, userUID,
+			`SELECT EXISTS(SELECT 1 FROM chat_participants WHERE chat_id = $1::uuid AND user_uuid = $2)`,
+			chatID, userUUID,
 		).Scan(&exists)
 		if err != nil || !exists {
 			c.JSON(http.StatusForbidden, model.ErrorResponse{Error: "not a participant"})
@@ -143,13 +143,13 @@ func GetChatDetail(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		}
 
 		pRows, err := pool.Query(c.Request.Context(),
-			`SELECT chat_id, user_uid, user_id FROM chat_participants WHERE chat_id = $1::uuid`, chatID,
+			`SELECT chat_id, user_uuid, user_id FROM chat_participants WHERE chat_id = $1::uuid`, chatID,
 		)
 		if err == nil {
 			defer pRows.Close()
 			for pRows.Next() {
 				var p model.ChatParticipant
-				if err := pRows.Scan(&p.ChatID, &p.UserUID, &p.UserID); err == nil {
+				if err := pRows.Scan(&p.ChatID, &p.UserUUID, &p.UserID); err == nil {
 					chat.Participants = append(chat.Participants, p)
 				}
 			}

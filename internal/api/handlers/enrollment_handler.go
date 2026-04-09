@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"firebase.google.com/go/v4/messaging"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -13,10 +12,10 @@ import (
 	"github.com/findr-app/findr-backend/internal/model"
 )
 
-func ApplyToProject(pool *pgxpool.Pool, log *zap.Logger, _ *messaging.Client) gin.HandlerFunc {
+func ApplyToProject(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		projectID := c.Param("id")
-		userUID := middleware.GetUserUID(c)
+		userUUID := middleware.GetUserUID(c)
 		userID := middleware.GetUserID(c)
 
 		var req model.EnrollRequest
@@ -32,13 +31,13 @@ func ApplyToProject(pool *pgxpool.Pool, log *zap.Logger, _ *messaging.Client) gi
 
 		var enrollment model.Enrollment
 		err := pool.QueryRow(c.Request.Context(),
-			`INSERT INTO enrollments (user_uid, user_id, user_name, user_profile_pic, project_id, role_id, role_name, message, status, pending)
+			`INSERT INTO enrollments (user_uuid, user_id, user_name, user_profile_pic, project_id, role_id, role_name, message, status, pending)
 			 VALUES ($1, $2, $3, $4, $5::uuid, $6, $7, $8, 'PENDING', true)
 			 RETURNING id, status, requested_at`,
-			userUID, userID, userName, profilePic, projectID, req.RoleID, req.RoleName, req.Message,
+			userUUID, userID, userName, profilePic, projectID, req.RoleID, req.RoleName, req.Message,
 		).Scan(&enrollment.ID, &enrollment.Status, &enrollment.RequestedAt)
 		if err != nil {
-			log.Error("apply to project failed", zap.Error(err))
+			log.Error("apply to post failed", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "failed to apply"})
 			return
 		}
@@ -52,12 +51,12 @@ func GetProjectEnrollments(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc 
 		projectID := c.Param("id")
 
 		rows, err := pool.Query(c.Request.Context(),
-			`SELECT id, user_uid, user_id, user_name, user_profile_pic, project_id,
+			`SELECT id, user_uuid, user_id, user_name, user_profile_pic, project_id,
 			        role_id, role_name, message, status, pending, accepted, rejected, requested_at, responded_at
 			 FROM enrollments WHERE project_id = $1::uuid ORDER BY requested_at DESC`, projectID,
 		)
 		if err != nil {
-			log.Error("get project enrollments failed", zap.Error(err))
+			log.Error("get post enrollments failed", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "failed to get enrollments"})
 			return
 		}
@@ -66,7 +65,7 @@ func GetProjectEnrollments(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc 
 		var enrollments []model.Enrollment
 		for rows.Next() {
 			var e model.Enrollment
-			if err := rows.Scan(&e.ID, &e.UserUID, &e.UserID, &e.UserName, &e.UserProfilePic, &e.ProjectID,
+			if err := rows.Scan(&e.ID, &e.UserUUID, &e.UserID, &e.UserName, &e.UserProfilePic, &e.ProjectID,
 				&e.RoleID, &e.RoleName, &e.Message, &e.Status, &e.Pending, &e.Accepted, &e.Rejected,
 				&e.RequestedAt, &e.RespondedAt); err != nil {
 				continue
@@ -83,7 +82,7 @@ func GetMyEnrollments(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		userID := middleware.GetUserID(c)
 
 		rows, err := pool.Query(c.Request.Context(),
-			`SELECT id, user_uid, user_id, user_name, user_profile_pic, project_id,
+			`SELECT id, user_uuid, user_id, user_name, user_profile_pic, project_id,
 			        role_id, role_name, message, status, pending, accepted, rejected, requested_at, responded_at
 			 FROM enrollments WHERE user_id = $1 ORDER BY requested_at DESC`, userID,
 		)
@@ -97,7 +96,7 @@ func GetMyEnrollments(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		var enrollments []model.Enrollment
 		for rows.Next() {
 			var e model.Enrollment
-			if err := rows.Scan(&e.ID, &e.UserUID, &e.UserID, &e.UserName, &e.UserProfilePic, &e.ProjectID,
+			if err := rows.Scan(&e.ID, &e.UserUUID, &e.UserID, &e.UserName, &e.UserProfilePic, &e.ProjectID,
 				&e.RoleID, &e.RoleName, &e.Message, &e.Status, &e.Pending, &e.Accepted, &e.Rejected,
 				&e.RequestedAt, &e.RespondedAt); err != nil {
 				continue
@@ -109,7 +108,7 @@ func GetMyEnrollments(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	}
 }
 
-func AcceptEnrollment(pool *pgxpool.Pool, log *zap.Logger, _ *messaging.Client) gin.HandlerFunc {
+func AcceptEnrollment(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		enrollmentID := c.Param("id")
 		now := time.Now()
@@ -132,7 +131,7 @@ func AcceptEnrollment(pool *pgxpool.Pool, log *zap.Logger, _ *messaging.Client) 
 	}
 }
 
-func RejectEnrollment(pool *pgxpool.Pool, log *zap.Logger, _ *messaging.Client) gin.HandlerFunc {
+func RejectEnrollment(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		enrollmentID := c.Param("id")
 		now := time.Now()

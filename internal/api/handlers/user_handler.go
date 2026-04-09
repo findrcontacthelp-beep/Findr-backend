@@ -19,7 +19,7 @@ func GetUser(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 
 		var u model.User
 		err := pool.QueryRow(c.Request.Context(),
-			`SELECT id, firebase_uid, name, email, profile_picture, headline, role_title,
+			`SELECT id, user_uuid, name, email, profile_picture, headline, role_title,
 			        is_student, college_name, company_name, experience, ctc, location,
 			        lat, lng, profile_image_url, banner_image_url, skills, social_links,
 			        college_year, college_stream, college_grade, college_start, college_end, college_institute,
@@ -28,7 +28,7 @@ func GetUser(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 			        about_text, activities, interests, user_list, stability, created_at, updated_at
 			 FROM users WHERE id = $1`, id,
 		).Scan(
-			&u.ID, &u.FirebaseUID, &u.Name, &u.Email, &u.ProfilePicture, &u.Headline, &u.RoleTitle,
+			&u.ID, &u.UserUUID, &u.Name, &u.Email, &u.ProfilePicture, &u.Headline, &u.RoleTitle,
 			&u.IsStudent, &u.CollegeName, &u.CompanyName, &u.Experience, &u.CTC, &u.Location,
 			&u.Lat, &u.Lng, &u.ProfileImageURL, &u.BannerImageURL, &u.Skills, &u.SocialLinks,
 			&u.CollegeYear, &u.CollegeStream, &u.CollegeGrade, &u.CollegeStart, &u.CollegeEnd, &u.CollegeInstitute,
@@ -56,16 +56,16 @@ func GetCurrentUser(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 
 		var u model.User
 		err := pool.QueryRow(c.Request.Context(),
-			`SELECT id, firebase_uid, name, email, profile_picture, headline, role_title,
+			`SELECT id, user_uuid, name, email, profile_picture, headline, role_title,
 			        is_student, college_name, company_name, experience, ctc, location,
 			        lat, lng, profile_image_url, banner_image_url, skills, social_links,
 			        college_year, college_stream, college_grade, college_start, college_end, college_institute,
 			        exp_title, exp_company, exp_type, exp_location, exp_description,
 			        exp_ctc, exp_start, exp_end, exp_currently_working,
 			        about_text, activities, interests, user_list, stability, created_at, updated_at
-			 FROM users WHERE firebase_uid = $1`, userUID,
+			 FROM users WHERE user_uuid = $1`, userUID,
 		).Scan(
-			&u.ID, &u.FirebaseUID, &u.Name, &u.Email, &u.ProfilePicture, &u.Headline, &u.RoleTitle,
+			&u.ID, &u.UserUUID, &u.Name, &u.Email, &u.ProfilePicture, &u.Headline, &u.RoleTitle,
 			&u.IsStudent, &u.CollegeName, &u.CompanyName, &u.Experience, &u.CTC, &u.Location,
 			&u.Lat, &u.Lng, &u.ProfileImageURL, &u.BannerImageURL, &u.Skills, &u.SocialLinks,
 			&u.CollegeYear, &u.CollegeStream, &u.CollegeGrade, &u.CollegeStart, &u.CollegeEnd, &u.CollegeInstitute,
@@ -132,7 +132,7 @@ func UpdateUser(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 				about_text = COALESCE($32, about_text),
 				activities = COALESCE($33, activities),
 				interests = COALESCE($34, interests)
-			 WHERE firebase_uid = $1`,
+			 WHERE user_uuid = $1`,
 			userUID, req.Name, req.Headline, req.RoleTitle, req.IsStudent,
 			req.CollegeName, req.CompanyName, req.Experience, req.CTC,
 			req.Location, req.Lat, req.Lng, req.ProfileImageURL, req.BannerImageURL,
@@ -162,7 +162,7 @@ func ListUsers(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		search := c.Query("search")
 		skill := c.Query("skill")
 
-		query := `SELECT id, firebase_uid, name, email, profile_picture, headline, role_title,
+		query := `SELECT id, user_uuid, name, email, profile_picture, headline, role_title,
 		                 is_student, college_name, company_name, location,
 		                 profile_image_url, skills, interests, created_at
 		          FROM users WHERE 1=1`
@@ -203,7 +203,7 @@ func ListUsers(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		for rows.Next() {
 			var u model.User
 			if err := rows.Scan(
-				&u.ID, &u.FirebaseUID, &u.Name, &u.Email, &u.ProfilePicture, &u.Headline, &u.RoleTitle,
+				&u.ID, &u.UserUUID, &u.Name, &u.Email, &u.ProfilePicture, &u.Headline, &u.RoleTitle,
 				&u.IsStudent, &u.CollegeName, &u.CompanyName, &u.Location,
 				&u.ProfileImageURL, &u.Skills, &u.Interests, &u.CreatedAt,
 			); err != nil {
@@ -236,7 +236,7 @@ func UpdateSkills(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		}
 
 		_, err := pool.Exec(c.Request.Context(),
-			`UPDATE users SET skills = $1 WHERE firebase_uid = $2`,
+			`UPDATE users SET skills = $1 WHERE user_uuid = $2`,
 			req.Skills, userUID,
 		)
 		if err != nil {
@@ -262,7 +262,7 @@ func UpdateSocialLinks(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		}
 
 		_, err := pool.Exec(c.Request.Context(),
-			`UPDATE users SET social_links = $1 WHERE firebase_uid = $2`,
+			`UPDATE users SET social_links = $1 WHERE user_uuid = $2`,
 			req.SocialLinks, userUID,
 		)
 		if err != nil {
@@ -275,38 +275,13 @@ func UpdateSocialLinks(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	}
 }
 
-func UpdateFCMToken(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		userUID := middleware.GetUserUID(c)
-
-		var req struct {
-			FCMToken string `json:"fcm_token" binding:"required"`
-		}
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: err.Error()})
-			return
-		}
-
-		_, err := pool.Exec(c.Request.Context(),
-			`UPDATE users SET fcm_token = $1 WHERE firebase_uid = $2`,
-			req.FCMToken, userUID,
-		)
-		if err != nil {
-			log.Error("update fcm token failed", zap.Error(err))
-			c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "failed to update fcm token"})
-			return
-		}
-
-		c.JSON(http.StatusOK, model.SuccessResponse{Message: "fcm token updated"})
-	}
-}
 
 func DeleteUser(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userUID := middleware.GetUserUID(c)
 
 		_, err := pool.Exec(c.Request.Context(),
-			`DELETE FROM users WHERE firebase_uid = $1`, userUID,
+			`DELETE FROM users WHERE user_uuid = $1`, userUID,
 		)
 		if err != nil {
 			log.Error("delete user failed", zap.Error(err))

@@ -21,11 +21,11 @@ const (
 )
 
 type Client struct {
-	Hub     *Hub
-	Conn    *websocket.Conn
-	UserUID string
-	ChatID  string
-	Send    chan []byte
+	Hub      *Hub
+	Conn     *websocket.Conn
+	UserUUID string
+	ChatID   string
+	Send     chan []byte
 }
 
 func (c *Client) ReadPump(pool *pgxpool.Pool, producer *kafkago.Writer, log *zap.Logger) {
@@ -103,12 +103,12 @@ func (c *Client) handleChatMessage(pool *pgxpool.Pool, producer *kafkago.Writer,
 
 	if producer != nil {
 		data, _ := json.Marshal(map[string]interface{}{
-			"chat_id":      c.ChatID,
-			"sender_uid":   c.UserUID,
-			"message":      chatMsg.Message,
-			"receiver_uid": chatMsg.ReceiverUID,
-			"reply_to":     chatMsg.ReplyTo,
-			"media":        chatMsg.Media,
+			"chat_id":       c.ChatID,
+			"sender_uuid":   c.UserUUID,
+			"message":       chatMsg.Message,
+			"receiver_uuid": chatMsg.ReceiverUUID,
+			"reply_to":      chatMsg.ReplyTo,
+			"media":         chatMsg.Media,
 		})
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -140,10 +140,10 @@ func (c *Client) writeMessageDirect(pool *pgxpool.Pool, chatMsg model.WSChatMess
 
 	var msgID string
 	err := pool.QueryRow(ctx,
-		`INSERT INTO chat_messages (chat_id, sender_uid, receiver_uid, message, reply_to, media, status)
+		`INSERT INTO chat_messages (chat_id, sender_uuid, receiver_uuid, message, reply_to, media, status)
 		 VALUES ($1::uuid, $2, $3, $4, $5, $6, 'sent')
 		 RETURNING id`,
-		c.ChatID, c.UserUID, chatMsg.ReceiverUID, chatMsg.Message, replyToJSON, mediaJSON,
+		c.ChatID, c.UserUUID, chatMsg.ReceiverUUID, chatMsg.Message, replyToJSON, mediaJSON,
 	).Scan(&msgID)
 	if err != nil {
 		log.Error("failed to insert message", zap.Error(err))
@@ -159,15 +159,15 @@ func (c *Client) writeMessageDirect(pool *pgxpool.Pool, chatMsg model.WSChatMess
 	}
 
 	broadcast, _ := json.Marshal(map[string]interface{}{
-		"type":         "message",
-		"id":           msgID,
-		"chat_id":      c.ChatID,
-		"sender_uid":   c.UserUID,
-		"message":      chatMsg.Message,
-		"receiver_uid": chatMsg.ReceiverUID,
-		"reply_to":     chatMsg.ReplyTo,
-		"media":        chatMsg.Media,
-		"status":       "sent",
+		"type":          "message",
+		"id":            msgID,
+		"chat_id":       c.ChatID,
+		"sender_uuid":   c.UserUUID,
+		"message":       chatMsg.Message,
+		"receiver_uuid": chatMsg.ReceiverUUID,
+		"reply_to":      chatMsg.ReplyTo,
+		"media":         chatMsg.Media,
+		"status":        "sent",
 	})
 	c.Hub.BroadcastToChat(c.ChatID, broadcast)
 }
@@ -193,9 +193,9 @@ func (c *Client) handleReadReceipt(pool *pgxpool.Pool, payload json.RawMessage, 
 	}
 
 	broadcast, _ := json.Marshal(map[string]interface{}{
-		"type":       "read_receipt",
-		"message_id": receipt.MessageID,
-		"reader_uid": c.UserUID,
+		"type":        "read_receipt",
+		"message_id":  receipt.MessageID,
+		"reader_uuid": c.UserUUID,
 	})
 	c.Hub.BroadcastToChat(c.ChatID, broadcast)
 }

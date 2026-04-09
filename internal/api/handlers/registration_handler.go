@@ -3,7 +3,6 @@ package handlers
 import (
 	"net/http"
 
-	"firebase.google.com/go/v4/messaging"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -12,10 +11,10 @@ import (
 	"github.com/findr-app/findr-backend/internal/model"
 )
 
-func RegisterForEvent(pool *pgxpool.Pool, log *zap.Logger, _ *messaging.Client) gin.HandlerFunc {
+func RegisterForEvent(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		projectID := c.Param("id")
-		userUID := middleware.GetUserUID(c)
+		userUUID := middleware.GetUserUID(c)
 		userID := middleware.GetUserID(c)
 
 		var userName, profilePic string
@@ -25,10 +24,10 @@ func RegisterForEvent(pool *pgxpool.Pool, log *zap.Logger, _ *messaging.Client) 
 
 		var reg model.Registration
 		err := pool.QueryRow(c.Request.Context(),
-			`INSERT INTO registrations (user_uid, user_id, user_name, user_profile_pic, project_id, status, registered)
+			`INSERT INTO registrations (user_uuid, user_id, user_name, user_profile_pic, project_id, status, registered)
 			 VALUES ($1, $2, $3, $4, $5::uuid, 'REGISTERED', true)
 			 RETURNING id, status, registered_at`,
-			userUID, userID, userName, profilePic, projectID,
+			userUUID, userID, userName, profilePic, projectID,
 		).Scan(&reg.ID, &reg.Status, &reg.RegisteredAt)
 		if err != nil {
 			log.Error("register for event failed", zap.Error(err))
@@ -45,7 +44,7 @@ func GetEventRegistrations(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc 
 		projectID := c.Param("id")
 
 		rows, err := pool.Query(c.Request.Context(),
-			`SELECT id, user_uid, user_id, user_name, user_profile_pic, project_id,
+			`SELECT id, user_uuid, user_id, user_name, user_profile_pic, project_id,
 			        status, registered, attended, attendance_confirmed, cancelled, registered_at
 			 FROM registrations WHERE project_id = $1::uuid ORDER BY registered_at DESC`, projectID,
 		)
@@ -59,7 +58,7 @@ func GetEventRegistrations(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc 
 		var registrations []model.Registration
 		for rows.Next() {
 			var r model.Registration
-			if err := rows.Scan(&r.ID, &r.UserUID, &r.UserID, &r.UserName, &r.UserProfilePic, &r.ProjectID,
+			if err := rows.Scan(&r.ID, &r.UserUUID, &r.UserID, &r.UserName, &r.UserProfilePic, &r.ProjectID,
 				&r.Status, &r.Registered, &r.Attended, &r.AttendanceConfirmed, &r.Cancelled, &r.RegisteredAt); err != nil {
 				continue
 			}
@@ -75,7 +74,7 @@ func GetMyRegistrations(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		userID := middleware.GetUserID(c)
 
 		rows, err := pool.Query(c.Request.Context(),
-			`SELECT id, user_uid, user_id, user_name, user_profile_pic, project_id,
+			`SELECT id, user_uuid, user_id, user_name, user_profile_pic, project_id,
 			        status, registered, attended, attendance_confirmed, cancelled, registered_at
 			 FROM registrations WHERE user_id = $1 ORDER BY registered_at DESC`, userID,
 		)
@@ -89,7 +88,7 @@ func GetMyRegistrations(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		var registrations []model.Registration
 		for rows.Next() {
 			var r model.Registration
-			if err := rows.Scan(&r.ID, &r.UserUID, &r.UserID, &r.UserName, &r.UserProfilePic, &r.ProjectID,
+			if err := rows.Scan(&r.ID, &r.UserUUID, &r.UserID, &r.UserName, &r.UserProfilePic, &r.ProjectID,
 				&r.Status, &r.Registered, &r.Attended, &r.AttendanceConfirmed, &r.Cancelled, &r.RegisteredAt); err != nil {
 				continue
 			}

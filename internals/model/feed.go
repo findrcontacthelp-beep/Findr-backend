@@ -13,7 +13,7 @@ type FeedItem struct {
 	ID               string            `json:"id"`
 	Type             string            `json:"type"`
 	AuthorName       string            `json:"author_name"`
-	AuthorUID        string            `json:"author_uid,omitempty"`
+	AuthorUUID       string            `json:"author_uuid,omitempty"`
 	Title            string            `json:"title"`
 	Description      string            `json:"description"`
 	Tags             []string          `json:"tags"`

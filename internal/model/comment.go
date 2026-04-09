@@ -8,9 +8,8 @@ import (
 
 type ProjectComment struct {
 	ID              uuid.UUID  `json:"id" db:"id"`
-	FirebaseID      *string    `json:"firebase_id,omitempty" db:"firebase_id"`
 	ProjectID       uuid.UUID  `json:"project_id" db:"project_id"`
-	SenderUID       *string    `json:"sender_uid,omitempty" db:"sender_uid"`
+	SenderUUID      *string    `json:"sender_uuid,omitempty" db:"sender_uuid"`
 	SenderID        *uuid.UUID `json:"sender_id,omitempty" db:"sender_id"`
 	SenderName      string     `json:"sender_name" db:"sender_name"`
 	SenderImageURL  string     `json:"sender_image_url" db:"sender_image_url"`

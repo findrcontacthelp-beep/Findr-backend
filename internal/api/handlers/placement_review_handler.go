@@ -30,7 +30,7 @@ func CreatePlacementReview(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc 
 		var review model.PlacementReview
 		err := pool.QueryRow(c.Request.Context(),
 			`INSERT INTO placement_reviews (
-				submitted_by_uid, submitted_by_id, submitted_by_name, company_name, company_logo,
+				submitted_by_uuid, submitted_by_id, submitted_by_name, company_name, company_logo,
 				year, month, academic_year, visit_date, difficulty, overall_experience,
 				package_type, package_min, package_max, package_list,
 				students_shortlisted, students_selected,
@@ -129,7 +129,7 @@ func GetPlacementReview(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 
 		var r model.PlacementReview
 		err := pool.QueryRow(c.Request.Context(),
-			`SELECT id, submitted_by_uid, submitted_by_id, submitted_by_name, submitted_at,
+			`SELECT id, submitted_by_uuid, submitted_by_id, submitted_by_name, submitted_at,
 			        company_name, company_logo, year, month, academic_year, visit_date,
 			        difficulty, overall_experience, package_type, package_min, package_max, package_list,
 			        students_shortlisted, students_selected,
@@ -137,7 +137,7 @@ func GetPlacementReview(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 			        tips, rounds, verification_status, verified_at, upvotes
 			 FROM placement_reviews WHERE id = $1`, id,
 		).Scan(
-			&r.ID, &r.SubmittedByUID, &r.SubmittedByID, &r.SubmittedByName, &r.SubmittedAt,
+			&r.ID, &r.SubmittedByUUID, &r.SubmittedByID, &r.SubmittedByName, &r.SubmittedAt,
 			&r.CompanyName, &r.CompanyLogo, &r.Year, &r.Month, &r.AcademicYear, &r.VisitDate,
 			&r.Difficulty, &r.OverallExperience, &r.PackageType, &r.PackageMin, &r.PackageMax, &r.PackageList,
 			&r.StudentsShortlisted, &r.StudentsSelected,

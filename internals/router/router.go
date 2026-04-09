@@ -41,7 +41,6 @@ func Setup(r *gin.Engine, d *Deps) {
 		users.DELETE("/me", auth, handlers.DeleteUser(d.Pool, d.Log))
 		users.PATCH("/me/skills", auth, handlers.UpdateSkills(d.Pool, d.Log))
 		users.PATCH("/me/social-links", auth, handlers.UpdateSocialLinks(d.Pool, d.Log))
-		users.PATCH("/me/fcm-token", auth, handlers.UpdateFCMToken(d.Pool, d.Log))
 		users.GET("", handlers.ListUsers(d.Pool, d.Log))
 		users.GET("/:id", handlers.GetUser(d.Pool, d.Log))
 		users.POST("/:id/views", auth, handlers.RecordProfileView(d.Pool, d.Log))
@@ -72,13 +71,13 @@ func Setup(r *gin.Engine, d *Deps) {
 		projects.DELETE("/:id", auth, handlers.DeleteProject(d.Pool, d.Log))
 		projects.POST("/:id/like", auth, handlers.ToggleLike(d.Pool, d.Log))
 		projects.GET("/:id/stats", handlers.GetProjectStats(d.Pool, d.Log))
-		projects.POST("/:id/comments", auth, handlers.CreateComment(d.Pool, d.Log, nil))
+		projects.POST("/:id/comments", auth, handlers.CreateComment(d.Pool, d.Log))
 		projects.GET("/:id/comments", handlers.GetComments(d.Pool, d.Log))
 		projects.POST("/:id/views", auth, handlers.RecordProjectView(d.Pool, d.Log))
 		projects.GET("/:id/views/count", handlers.GetProjectViewCount(d.Pool, d.Log))
-		projects.POST("/:id/enrollments", auth, handlers.ApplyToProject(d.Pool, d.Log, nil))
+		projects.POST("/:id/enrollments", auth, handlers.ApplyToProject(d.Pool, d.Log))
 		projects.GET("/:id/enrollments", auth, handlers.GetProjectEnrollments(d.Pool, d.Log))
-		projects.POST("/:id/registrations", auth, handlers.RegisterForEvent(d.Pool, d.Log, nil))
+		projects.POST("/:id/registrations", auth, handlers.RegisterForEvent(d.Pool, d.Log))
 		projects.GET("/:id/registrations", auth, handlers.GetEventRegistrations(d.Pool, d.Log))
 	}
 
@@ -92,8 +91,8 @@ func Setup(r *gin.Engine, d *Deps) {
 	enrollments := v1.Group("/enrollments", auth)
 	{
 		enrollments.GET("/me", handlers.GetMyEnrollments(d.Pool, d.Log))
-		enrollments.PATCH("/:id/accept", handlers.AcceptEnrollment(d.Pool, d.Log, nil))
-		enrollments.PATCH("/:id/reject", handlers.RejectEnrollment(d.Pool, d.Log, nil))
+		enrollments.PATCH("/:id/accept", handlers.AcceptEnrollment(d.Pool, d.Log))
+		enrollments.PATCH("/:id/reject", handlers.RejectEnrollment(d.Pool, d.Log))
 	}
 
 	eventRegs := v1.Group("/registrations", auth)
@@ -108,7 +107,7 @@ func Setup(r *gin.Engine, d *Deps) {
 		chats.GET("", handlers.GetMyChats(d.Pool, d.Log))
 		chats.GET("/:id", handlers.GetChatDetail(d.Pool, d.Log))
 		chats.GET("/:id/messages", handlers.GetMessages(d.Pool, d.Log))
-		chats.POST("/:id/messages", handlers.SendMessage(d.Pool, d.Log, nil, nil, nil))
+		chats.POST("/:id/messages", handlers.SendMessage(d.Pool, d.Log, nil, nil))
 	}
 
 	v1.GET("/roles", handlers.ListAvailableRoles(d.Pool, d.Log))

@@ -41,8 +41,8 @@ func HandleWebSocket(hub *Hub, pool *pgxpool.Pool, producer *kafkago.Writer, jwt
 			return
 		}
 
-		userUID, _ := claims["sub"].(string)
-		if userUID == "" {
+		userUUID, _ := claims["sub"].(string)
+		if userUUID == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing subject"})
 			return
 		}
@@ -51,9 +51,8 @@ func HandleWebSocket(hub *Hub, pool *pgxpool.Pool, producer *kafkago.Writer, jwt
 		err = pool.QueryRow(c.Request.Context(),
 			`SELECT EXISTS(
 				SELECT 1 FROM chat_participants cp
-				JOIN users u ON u.id = cp.user_id
-				WHERE cp.chat_id = $1::uuid AND u.firebase_uid = $2
-			)`, chatID, userUID,
+				WHERE cp.chat_id = $1::uuid AND cp.user_uuid = $2
+			)`, chatID, userUUID,
 		).Scan(&exists)
 		if err != nil || !exists {
 			c.JSON(http.StatusForbidden, gin.H{"error": "not a participant of this chat"})
@@ -67,11 +66,11 @@ func HandleWebSocket(hub *Hub, pool *pgxpool.Pool, producer *kafkago.Writer, jwt
 		}
 
 		client := &Client{
-			Hub:     hub,
-			Conn:    conn,
-			UserUID: userUID,
-			ChatID:  chatID,
-			Send:    make(chan []byte, 256),
+			Hub:      hub,
+			Conn:     conn,
+			UserUUID: userUUID,
+			ChatID:   chatID,
+			Send:     make(chan []byte, 256),
 		}
 
 		hub.Register(client)

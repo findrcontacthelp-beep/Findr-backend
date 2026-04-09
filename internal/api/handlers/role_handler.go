@@ -13,7 +13,7 @@ import (
 func ListAvailableRoles(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rows, err := pool.Query(c.Request.Context(),
-			`SELECT id, firebase_id, name FROM available_roles ORDER BY name`)
+			`SELECT id, name FROM available_roles ORDER BY name`)
 		if err != nil {
 			log.Error("list roles failed", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "failed to list roles"})
@@ -24,7 +24,7 @@ func ListAvailableRoles(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		var roles []model.AvailableRole
 		for rows.Next() {
 			var r model.AvailableRole
-			if err := rows.Scan(&r.ID, &r.FirebaseID, &r.Name); err != nil {
+			if err := rows.Scan(&r.ID, &r.Name); err != nil {
 				continue
 			}
 			roles = append(roles, r)
@@ -83,7 +83,7 @@ func SubmitRoleRequest(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 func ListRoleRequests(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rows, err := pool.Query(c.Request.Context(),
-			`SELECT id, firebase_id, name FROM role_requests ORDER BY name`)
+			`SELECT id, name FROM role_requests ORDER BY name`)
 		if err != nil {
 			log.Error("list role requests failed", zap.Error(err))
 			c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "failed to list role requests"})
@@ -94,7 +94,7 @@ func ListRoleRequests(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 		var requests []model.RoleRequest
 		for rows.Next() {
 			var r model.RoleRequest
-			if err := rows.Scan(&r.ID, &r.FirebaseID, &r.Name); err != nil {
+			if err := rows.Scan(&r.ID, &r.Name); err != nil {
 				continue
 			}
 			requests = append(requests, r)

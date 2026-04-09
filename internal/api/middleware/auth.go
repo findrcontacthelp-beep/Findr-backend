@@ -51,7 +51,7 @@ func AuthRequired(pool *pgxpool.Pool, jwtSecret string, log *zap.Logger) gin.Han
 
 		var userID uuid.UUID
 		err = pool.QueryRow(c.Request.Context(),
-			"SELECT id FROM public.users WHERE user_uid = $1", sub,
+			"SELECT id FROM public.users WHERE user_uuid = $1", sub,
 		).Scan(&userID)
 		if err == nil {
 			c.Set("userID", userID)

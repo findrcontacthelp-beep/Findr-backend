@@ -69,7 +69,7 @@ func (r *PostgresUserRepository) CreateUser(ctx context.Context, req authmodel.R
 
 func (r *PostgresUserRepository) AuthenticateUser(ctx context.Context, email, password string) (*model.User, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, user_uid, name, email, college_name, college_stream, college_year, interests, created_at, updated_at, password_hash
+		`SELECT id, user_uuid, name, email, college_name, college_stream, college_year, interests, created_at, updated_at, password_hash
 		 FROM users
 		 WHERE lower(email) = $1
 		 ORDER BY created_at ASC

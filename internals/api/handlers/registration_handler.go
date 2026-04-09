@@ -8,7 +8,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/findr-app/findr-backend/internal/model"
-	"github.com/findr-app/findr-backend/internals/api/middleware"
 	authmodel "github.com/findr-app/findr-backend/internals/model"
 	"github.com/findr-app/findr-backend/internals/repository"
 )
@@ -45,12 +44,6 @@ func Register(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	userRepo := repository.NewUserRepository(pool)
 
 	return func(c *gin.Context) {
-		firebaseUID := middleware.GetUserUID(c)
-		if firebaseUID == "" {
-			c.JSON(http.StatusUnauthorized, model.ErrorResponse{Error: "missing user identity"})
-			return
-		}
-
 		var req authmodel.RegisterRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: err.Error()})
@@ -77,7 +70,7 @@ func Register(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 			}
 		}
 
-		u, err := userRepo.CreateUser(c.Request.Context(), firebaseUID, req)
+		u, err := userRepo.CreateUser(c.Request.Context(), req)
 		if err != nil {
 			if err == repository.ErrUserAlreadyExists {
 				c.JSON(http.StatusConflict, model.ErrorResponse{Error: "user already exists"})
