@@ -21,6 +21,6 @@ Thumbs.db
 
 # Go
 vendor/
-
+.gomodcache/
 # Agent Monitor
 .agent/

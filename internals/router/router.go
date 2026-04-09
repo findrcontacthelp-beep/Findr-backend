@@ -3,6 +3,7 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	"github.com/findr-app/findr-backend/internal/api/handlers"
@@ -12,6 +13,7 @@ import (
 
 type Deps struct {
 	Pool      *pgxpool.Pool
+	Redis     *redis.Client
 	Log       *zap.Logger
 	JWTSecret string
 	AdminUIDs []string
@@ -29,6 +31,7 @@ func Setup(r *gin.Engine, d *Deps) {
 	// Auth
 	authrouter.Setup(r, &authrouter.Deps{
 		Pool:      d.Pool,
+		Redis:     d.Redis,
 		Log:       d.Log,
 		JWTSecret: d.JWTSecret,
 	})

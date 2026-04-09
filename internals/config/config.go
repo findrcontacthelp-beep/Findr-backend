@@ -11,6 +11,7 @@ type Config struct {
 	Environment string
 
 	DatabaseURL string
+	RedisURL    string
 
 	SupabaseURL       string
 	SupabaseJWTSecret string
@@ -31,11 +32,13 @@ func Load() (*Config, error) {
 
 	viper.SetDefault("PORT", "8080")
 	viper.SetDefault("ENV", "development")
+	viper.SetDefault("REDIS_URL", "redis://localhost:6379/0")
 
 	cfg := &Config{
 		Port:                    viper.GetString("PORT"),
 		Environment:             viper.GetString("ENV"),
 		DatabaseURL:             viper.GetString("DATABASE_URL"),
+		RedisURL:                viper.GetString("REDIS_URL"),
 		SupabaseURL:             viper.GetString("SUPABASE_URL"),
 		SupabaseJWTSecret:       viper.GetString("SUPABASE_JWT_SECRET"),
 		KafkaUsername:           viper.GetString("KAFKA_USERNAME"),

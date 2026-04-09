@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	"github.com/findr-app/findr-backend/internals/config"
@@ -40,12 +41,20 @@ func main() {
 	}
 	defer pool.Close()
 
+	opt, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		zapLog.Fatal("failed to parse redis url", zap.Error(err))
+	}
+	redisClient := redis.NewClient(opt)
+	defer redisClient.Close()
+
 	// Router
 	r := gin.New()
 	r.Use(gin.Recovery())
 
 	router.Setup(r, &router.Deps{
 		Pool:      pool,
+		Redis:     redisClient,
 		Log:       zapLog,
 		JWTSecret: cfg.SupabaseJWTSecret,
 		AdminUIDs: cfg.AdminUIDs,

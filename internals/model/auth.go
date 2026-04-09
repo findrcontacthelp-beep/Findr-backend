@@ -10,6 +10,16 @@ type RegisterRequest struct {
 	Interests      []string `json:"interests" binding:"required,min=1"`
 }
 
+type VerifyRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	OTP   string `json:"otp" binding:"required"`
+}
+
+type RedisRegistrationData struct {
+	OTP     string          `json:"otp"`
+	Request RegisterRequest `json:"request"`
+}
+
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8"`
