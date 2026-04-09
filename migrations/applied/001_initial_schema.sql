@@ -405,62 +405,84 @@ create trigger set_projects_updated_at
 alter table public.users enable row level security;
 create policy "Anyone can read user profiles"
   on public.users for select using (true);
-create policy "Users can update own profile"
-  on public.users for update using (auth.uid()::text = firebase_uid);
 
 alter table public.projects enable row level security;
 create policy "Anyone can read projects"
   on public.projects for select using (true);
-create policy "Authenticated users can create projects"
-  on public.projects for insert with check (auth.role() = 'authenticated');
-create policy "Authors can update own projects"
-  on public.projects for update
-  using (author_id = (select id from public.users where firebase_uid = auth.uid()::text));
 
 alter table public.project_comments enable row level security;
 create policy "Anyone can read comments"
   on public.project_comments for select using (true);
-create policy "Authenticated users can add comments"
-  on public.project_comments for insert with check (auth.role() = 'authenticated');
 
 alter table public.chats enable row level security;
-create policy "Participants can read their chats"
-  on public.chats for select
-  using (id in (
-    select chat_id from public.chat_participants
-    where user_id = (select id from public.users where firebase_uid = auth.uid()::text)
-  ));
-
 alter table public.chat_messages enable row level security;
-create policy "Participants can read chat messages"
-  on public.chat_messages for select
-  using (chat_id in (
-    select chat_id from public.chat_participants
-    where user_id = (select id from public.users where firebase_uid = auth.uid()::text)
-  ));
-create policy "Participants can send messages"
-  on public.chat_messages for insert
-  with check (chat_id in (
-    select chat_id from public.chat_participants
-    where user_id = (select id from public.users where firebase_uid = auth.uid()::text)
-  ));
 
 alter table public.enrollments enable row level security;
-create policy "Users can read own enrollments"
-  on public.enrollments for select
-  using (user_id = (select id from public.users where firebase_uid = auth.uid()::text));
 
 alter table public.placement_reviews enable row level security;
 create policy "Anyone can read placement reviews"
   on public.placement_reviews for select using (true);
 
+do $$
+begin
+  if exists (select 1 from information_schema.schemata where schema_name = 'auth') then
+    execute 'create policy "Users can update own profile"
+      on public.users for update using (auth.uid()::text = firebase_uid)';
+
+    execute 'create policy "Authenticated users can create projects"
+      on public.projects for insert with check (auth.role() = ''authenticated'')';
+
+    execute '' ||
+      'create policy "Authors can update own projects" ' ||
+      'on public.projects for update ' ||
+      'using (author_id = (select id from public.users where firebase_uid = auth.uid()::text))';
+
+    execute 'create policy "Authenticated users can add comments"
+      on public.project_comments for insert with check (auth.role() = ''authenticated'')';
+
+    execute '' ||
+      'create policy "Participants can read their chats" ' ||
+      'on public.chats for select ' ||
+      'using (id in (' ||
+      '  select chat_id from public.chat_participants ' ||
+      '  where user_id = (select id from public.users where firebase_uid = auth.uid()::text)' ||
+      '))';
+
+    execute '' ||
+      'create policy "Participants can read chat messages" ' ||
+      'on public.chat_messages for select ' ||
+      'using (chat_id in (' ||
+      '  select chat_id from public.chat_participants ' ||
+      '  where user_id = (select id from public.users where firebase_uid = auth.uid()::text)' ||
+      '))';
+
+    execute '' ||
+      'create policy "Participants can send messages" ' ||
+      'on public.chat_messages for insert ' ||
+      'with check (chat_id in (' ||
+      '  select chat_id from public.chat_participants ' ||
+      '  where user_id = (select id from public.users where firebase_uid = auth.uid()::text)' ||
+      '))';
+
+    execute '' ||
+      'create policy "Users can read own enrollments" ' ||
+      'on public.enrollments for select ' ||
+      'using (user_id = (select id from public.users where firebase_uid = auth.uid()::text))';
+  end if;
+end $$;
+
 -- ============================================================
 -- ENABLE REALTIME
 -- ============================================================
-alter publication supabase_realtime add table public.chats;
-alter publication supabase_realtime add table public.chat_messages;
-alter publication supabase_realtime add table public.projects;
-alter publication supabase_realtime add table public.project_comments;
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    alter publication supabase_realtime add table public.chats;
+    alter publication supabase_realtime add table public.chat_messages;
+    alter publication supabase_realtime add table public.projects;
+    alter publication supabase_realtime add table public.project_comments;
+  end if;
+end $$;
 
 -- ============================================================
 -- DONE!

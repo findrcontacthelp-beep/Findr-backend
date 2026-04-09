@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
@@ -13,35 +12,6 @@ import (
 	"github.com/findr-app/findr-backend/internal/api/middleware"
 	"github.com/findr-app/findr-backend/internal/model"
 )
-
-func CreateUser(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var req model.CreateUserRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: err.Error()})
-			return
-		}
-
-		var u model.User
-		err := pool.QueryRow(c.Request.Context(),
-			`INSERT INTO users (firebase_uid, name, email)
-			 VALUES ($1, $2, $3)
-			 RETURNING id, firebase_uid, name, email, created_at, updated_at`,
-			req.FirebaseUID, req.Name, req.Email,
-		).Scan(&u.ID, &u.FirebaseUID, &u.Name, &u.Email, &u.CreatedAt, &u.UpdatedAt)
-		if err != nil {
-			if strings.Contains(err.Error(), "duplicate key") {
-				c.JSON(http.StatusConflict, model.ErrorResponse{Error: "user already exists"})
-				return
-			}
-			log.Error("create user failed", zap.Error(err))
-			c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "failed to create user"})
-			return
-		}
-
-		c.JSON(http.StatusCreated, u)
-	}
-}
 
 func GetUser(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -55,7 +25,7 @@ func GetUser(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 			        college_year, college_stream, college_grade, college_start, college_end, college_institute,
 			        exp_title, exp_company, exp_type, exp_location, exp_description,
 			        exp_ctc, exp_start, exp_end, exp_currently_working,
-			        about_text, activities, user_list, stability, created_at, updated_at
+			        about_text, activities, interests, user_list, stability, created_at, updated_at
 			 FROM users WHERE id = $1`, id,
 		).Scan(
 			&u.ID, &u.FirebaseUID, &u.Name, &u.Email, &u.ProfilePicture, &u.Headline, &u.RoleTitle,
@@ -64,7 +34,7 @@ func GetUser(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 			&u.CollegeYear, &u.CollegeStream, &u.CollegeGrade, &u.CollegeStart, &u.CollegeEnd, &u.CollegeInstitute,
 			&u.ExpTitle, &u.ExpCompany, &u.ExpType, &u.ExpLocation, &u.ExpDescription,
 			&u.ExpCTC, &u.ExpStart, &u.ExpEnd, &u.ExpCurrently,
-			&u.AboutText, &u.Activities, &u.UserList, &u.Stability, &u.CreatedAt, &u.UpdatedAt,
+			&u.AboutText, &u.Activities, &u.Interests, &u.UserList, &u.Stability, &u.CreatedAt, &u.UpdatedAt,
 		)
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, model.ErrorResponse{Error: "user not found"})
@@ -92,7 +62,7 @@ func GetCurrentUser(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 			        college_year, college_stream, college_grade, college_start, college_end, college_institute,
 			        exp_title, exp_company, exp_type, exp_location, exp_description,
 			        exp_ctc, exp_start, exp_end, exp_currently_working,
-			        about_text, activities, user_list, stability, created_at, updated_at
+			        about_text, activities, interests, user_list, stability, created_at, updated_at
 			 FROM users WHERE firebase_uid = $1`, userUID,
 		).Scan(
 			&u.ID, &u.FirebaseUID, &u.Name, &u.Email, &u.ProfilePicture, &u.Headline, &u.RoleTitle,
@@ -101,7 +71,7 @@ func GetCurrentUser(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 			&u.CollegeYear, &u.CollegeStream, &u.CollegeGrade, &u.CollegeStart, &u.CollegeEnd, &u.CollegeInstitute,
 			&u.ExpTitle, &u.ExpCompany, &u.ExpType, &u.ExpLocation, &u.ExpDescription,
 			&u.ExpCTC, &u.ExpStart, &u.ExpEnd, &u.ExpCurrently,
-			&u.AboutText, &u.Activities, &u.UserList, &u.Stability, &u.CreatedAt, &u.UpdatedAt,
+			&u.AboutText, &u.Activities, &u.Interests, &u.UserList, &u.Stability, &u.CreatedAt, &u.UpdatedAt,
 		)
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, model.ErrorResponse{Error: "user not found"})
@@ -160,7 +130,8 @@ func UpdateUser(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 				exp_end = COALESCE($30, exp_end),
 				exp_currently_working = COALESCE($31, exp_currently_working),
 				about_text = COALESCE($32, about_text),
-				activities = COALESCE($33, activities)
+				activities = COALESCE($33, activities),
+				interests = COALESCE($34, interests)
 			 WHERE firebase_uid = $1`,
 			userUID, req.Name, req.Headline, req.RoleTitle, req.IsStudent,
 			req.CollegeName, req.CompanyName, req.Experience, req.CTC,
@@ -170,7 +141,7 @@ func UpdateUser(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 			req.CollegeEnd, req.CollegeInstitute,
 			req.ExpTitle, req.ExpCompany, req.ExpType, req.ExpLocation, req.ExpDescription,
 			req.ExpCTC, req.ExpStart, req.ExpEnd, req.ExpCurrently,
-			req.AboutText, req.Activities,
+			req.AboutText, req.Activities, req.Interests,
 		)
 		if err != nil {
 			log.Error("update user failed", zap.Error(err))
@@ -193,7 +164,7 @@ func ListUsers(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 
 		query := `SELECT id, firebase_uid, name, email, profile_picture, headline, role_title,
 		                 is_student, college_name, company_name, location,
-		                 profile_image_url, skills, created_at
+		                 profile_image_url, skills, interests, created_at
 		          FROM users WHERE 1=1`
 		countQuery := `SELECT COUNT(*) FROM users WHERE 1=1`
 		args := []interface{}{}
@@ -234,7 +205,7 @@ func ListUsers(pool *pgxpool.Pool, log *zap.Logger) gin.HandlerFunc {
 			if err := rows.Scan(
 				&u.ID, &u.FirebaseUID, &u.Name, &u.Email, &u.ProfilePicture, &u.Headline, &u.RoleTitle,
 				&u.IsStudent, &u.CollegeName, &u.CompanyName, &u.Location,
-				&u.ProfileImageURL, &u.Skills, &u.CreatedAt,
+				&u.ProfileImageURL, &u.Skills, &u.Interests, &u.CreatedAt,
 			); err != nil {
 				log.Error("scan user failed", zap.Error(err))
 				continue

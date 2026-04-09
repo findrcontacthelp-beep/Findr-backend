@@ -16,7 +16,7 @@ type Config struct {
 	SupabaseJWTSecret string
 
 	KafkaBrokers  []string
-	KafkaUsername  string
+	KafkaUsername string
 	KafkaPassword string
 	KafkaUseTLS   bool
 

@@ -141,22 +141,24 @@ func SendMessage(pool *pgxpool.Pool, log *zap.Logger, producer *kafkago.Writer, 
 			req.Message, chatID,
 		)
 
-		// Broadcast via WebSocket
-		broadcast, _ := json.Marshal(map[string]interface{}{
-			"type":         "message",
-			"id":           msgID,
-			"chat_id":      chatID,
-			"sender_uid":   userUID,
-			"message":      req.Message,
-			"receiver_uid": req.ReceiverUID,
-			"reply_to":     req.ReplyTo,
-			"media":        req.Media,
-			"status":       "sent",
-		})
-		hub.BroadcastToChat(chatID, broadcast)
+		// Broadcast via WebSocket when a hub is configured.
+		if hub != nil {
+			broadcast, _ := json.Marshal(map[string]interface{}{
+				"type":         "message",
+				"id":           msgID,
+				"chat_id":      chatID,
+				"sender_uid":   userUID,
+				"message":      req.Message,
+				"receiver_uid": req.ReceiverUID,
+				"reply_to":     req.ReplyTo,
+				"media":        req.Media,
+				"status":       "sent",
+			})
+			hub.BroadcastToChat(chatID, broadcast)
+		}
 
-		// Push notification for offline receiver
-		if fcm != nil && req.ReceiverUID != nil && !hub.IsUserOnline(chatID, *req.ReceiverUID) {
+		// Push notification for offline receiver when FCM and WebSocket presence are configured.
+		if fcm != nil && hub != nil && req.ReceiverUID != nil && !hub.IsUserOnline(chatID, *req.ReceiverUID) {
 			var fcmToken string
 			_ = pool.QueryRow(c.Request.Context(),
 				`SELECT fcm_token FROM users WHERE firebase_uid = $1 AND fcm_token IS NOT NULL`,

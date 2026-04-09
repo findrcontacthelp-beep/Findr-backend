@@ -9,7 +9,7 @@ import (
 
 type User struct {
 	ID               uuid.UUID       `json:"id" db:"id"`
-	FirebaseUID      string          `json:"firebase_uid" db:"firebase_uid"`
+	UserUUID         string          `json:"user_uuid" db:"user_uuid"`
 	Name             string          `json:"name" db:"name"`
 	Email            *string         `json:"email,omitempty" db:"email"`
 	ProfilePicture   string          `json:"profile_picture" db:"profile_picture"`
@@ -28,8 +28,8 @@ type User struct {
 	BannerImageURL   string          `json:"banner_image_url" db:"banner_image_url"`
 	Skills           []string        `json:"skills" db:"skills"`
 	SocialLinks      json.RawMessage `json:"social_links" db:"social_links"`
-	CollegeYear      string          `json:"college_year" db:"college_year"`
-	CollegeStream    string          `json:"college_stream" db:"college_stream"`
+	CollegeYear      string          `json:"graduation_year" db:"college_year"`
+	CollegeStream    string          `json:"branch" db:"college_stream"`
 	CollegeGrade     string          `json:"college_grade" db:"college_grade"`
 	CollegeStart     string          `json:"college_start" db:"college_start"`
 	CollegeEnd       string          `json:"college_end" db:"college_end"`
@@ -45,6 +45,7 @@ type User struct {
 	ExpCurrently     bool            `json:"exp_currently_working" db:"exp_currently_working"`
 	AboutText        string          `json:"about_text" db:"about_text"`
 	Activities       json.RawMessage `json:"activities" db:"activities"`
+	Interests        []string        `json:"interests" db:"interests"`
 	UserList         []string        `json:"user_list" db:"user_list"`
 	Stability        int             `json:"stability" db:"stability"`
 	CreatedAt        time.Time       `json:"created_at" db:"created_at"`
@@ -52,9 +53,12 @@ type User struct {
 }
 
 type CreateUserRequest struct {
-	FirebaseUID string  `json:"firebase_uid" binding:"required"`
-	Name        string  `json:"name" binding:"required"`
-	Email       *string `json:"email"`
+	Name          string   `json:"name" binding:"required"`
+	Email         string   `json:"email" binding:"required,email"`
+	CollegeName   string   `json:"college_name" binding:"required"`
+	CollegeStream string   `json:"branch" binding:"required"`
+	CollegeYear   string   `json:"graduation_year" binding:"required"`
+	Interests     []string `json:"interests" binding:"required,min=1"`
 }
 
 type UpdateUserRequest struct {
@@ -73,8 +77,8 @@ type UpdateUserRequest struct {
 	BannerImageURL   *string          `json:"banner_image_url"`
 	Skills           *[]string        `json:"skills"`
 	SocialLinks      *json.RawMessage `json:"social_links"`
-	CollegeYear      *string          `json:"college_year"`
-	CollegeStream    *string          `json:"college_stream"`
+	CollegeYear      *string          `json:"graduation_year"`
+	CollegeStream    *string          `json:"branch"`
 	CollegeGrade     *string          `json:"college_grade"`
 	CollegeStart     *string          `json:"college_start"`
 	CollegeEnd       *string          `json:"college_end"`
@@ -90,4 +94,5 @@ type UpdateUserRequest struct {
 	ExpCurrently     *bool            `json:"exp_currently_working"`
 	AboutText        *string          `json:"about_text"`
 	Activities       *json.RawMessage `json:"activities"`
+	Interests        *[]string        `json:"interests"`
 }

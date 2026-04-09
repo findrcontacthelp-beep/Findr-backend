@@ -61,22 +61,6 @@ func AuthRequired(pool *pgxpool.Pool, jwtSecret string, log *zap.Logger) gin.Han
 	}
 }
 
-func RequireAdmin(adminUIDs []string) gin.HandlerFunc {
-	adminSet := make(map[string]bool, len(adminUIDs))
-	for _, uid := range adminUIDs {
-		adminSet[strings.TrimSpace(uid)] = true
-	}
-
-	return func(c *gin.Context) {
-		userUID := GetUserUID(c)
-		if !adminSet[userUID] {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "admin access required"})
-			return
-		}
-		c.Next()
-	}
-}
-
 func GetUserUID(c *gin.Context) string {
 	uid, _ := c.Get("userUID")
 	s, _ := uid.(string)

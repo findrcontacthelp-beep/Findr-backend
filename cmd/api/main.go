@@ -12,14 +12,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/findr-app/findr-backend/internal/api/router"
-	"github.com/findr-app/findr-backend/internal/chat"
-	"github.com/findr-app/findr-backend/internal/config"
-	"github.com/findr-app/findr-backend/internal/db"
-	"github.com/findr-app/findr-backend/internal/firebase"
-	"github.com/findr-app/findr-backend/internal/kafka"
-	"github.com/findr-app/findr-backend/internal/logger"
-	"github.com/findr-app/findr-backend/internal/ws"
+	"github.com/findr-app/findr-backend/internals/config"
+	"github.com/findr-app/findr-backend/internals/db"
+	"github.com/findr-app/findr-backend/internals/logger"
+	router "github.com/findr-app/findr-backend/internals/router"
 )
 
 func main() {
@@ -44,27 +40,6 @@ func main() {
 	}
 	defer pool.Close()
 
-	// Firebase (optional)
-	fcm := firebase.InitMessaging(ctx, cfg.FirebaseCredentialsPath, zapLog)
-
-	// Kafka (optional)
-	kafkaCfg := &kafka.KafkaConfig{
-		Brokers:  cfg.KafkaBrokers,
-		Topic:    "chat-messages",
-		GroupID:  "findr-chat-consumer",
-		UseTLS:   cfg.KafkaUseTLS,
-		Username: cfg.KafkaUsername,
-		Password: cfg.KafkaPassword,
-	}
-	producer := kafka.NewProducer(kafkaCfg, zapLog)
-	reader := kafka.NewReader(kafkaCfg, zapLog)
-
-	// WebSocket hub
-	hub := ws.NewHub(zapLog)
-
-	// Start Kafka chat consumer
-	go chat.StartConsumer(ctx, reader, pool, hub, fcm, zapLog)
-
 	// Router
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -72,9 +47,6 @@ func main() {
 	router.Setup(r, &router.Deps{
 		Pool:      pool,
 		Log:       zapLog,
-		Hub:       hub,
-		Producer:  producer,
-		FCM:       fcm,
 		JWTSecret: cfg.SupabaseJWTSecret,
 		AdminUIDs: cfg.AdminUIDs,
 	})
@@ -103,13 +75,6 @@ func main() {
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		zapLog.Error("server forced to shutdown", zap.Error(err))
-	}
-
-	if producer != nil {
-		producer.Close()
-	}
-	if reader != nil {
-		reader.Close()
 	}
 
 	zapLog.Info("server exited")
