@@ -139,7 +139,7 @@ func VerifyRegistration(pool *pgxpool.Pool, redisClient *redis.Client, log *zap.
 			return
 		}
 
-		u, err := userRepo.CreateUser(c.Request.Context(), redisData.Request)
+		_, err = userRepo.CreateUser(c.Request.Context(), redisData.Request)
 		if err != nil {
 			if err == repository.ErrUserAlreadyExists {
 				c.JSON(http.StatusConflict, model.ErrorResponse{Error: "user already exists"})
@@ -157,6 +157,6 @@ func VerifyRegistration(pool *pgxpool.Pool, redisClient *redis.Client, log *zap.
 		// Delete key from redis on success
 		redisClient.Del(ctx, "registration:"+vr.Email)
 
-		c.JSON(http.StatusCreated, u)
+		c.JSON(http.StatusCreated, model.SuccessResponse{Message: "Registration is successful"})
 	}
 }

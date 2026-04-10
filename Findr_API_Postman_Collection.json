@@ -1,8 +1,8 @@
 {
 	"info": {
 		"_postman_id": "f8a0e2a1-1234-4567-890a-bcdef1234567",
-		"name": "Findr API",
-		"description": "API Collection for Findr Backend with Auth, Users, Groups, Buzz, and Live Events.",
+		"name": "Findr API — internals",
+		"description": "API Collection covering endpoints defined in internals/api: Auth (Register, Verify, Login) and Feed/Discovery (Feed, Buzz, Live Events).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -17,53 +17,33 @@
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\",\n    \"college_name\": \"Stanford University\",\n    \"branch\": \"Computer Science\",\n    \"graduation_year\": \"2025\",\n    \"interests\": [\"Technology\"]\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/auth/register",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"register"
-							]
-						}
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "auth", "register"]
+						},
+						"description": "Validates input against allowed colleges, branches, graduation years, and interests. Stores registration data in Redis with a generated OTP (2 min TTL). Returns the OTP in the response (email delivery not yet implemented)."
 					},
 					"response": []
 				},
 				{
-					"name": "Verify registration",
+					"name": "Verify Registration",
 					"request": {
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"email\": \"test@example.com\",\n    \"otp\": \"123456\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/auth/verify",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"verify"
-							]
-						}
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "auth", "verify"]
+						},
+						"description": "Verifies the OTP against Redis registration data. On success, creates the user in the database and deletes the Redis key."
 					},
 					"response": []
 				},
@@ -75,220 +55,76 @@
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
+							"options": { "raw": { "language": "json" } }
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/auth/login",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"login"
-							]
-						}
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "auth", "login"]
+						},
+						"description": "Authenticates the user and returns a JWT access token (24h TTL)."
 					},
 					"response": []
 				}
 			]
 		},
 		{
-			"name": "Internal",
+			"name": "Feed & Discovery",
 			"item": [
 				{
-					"name": "Feed",
+					"name": "Get Feed",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/feed",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"feed"
-							]
-						}
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "feed"]
+						},
+						"description": "Returns all posts (type != 'live') ordered by created_at DESC. Feed item types: post, project, bug, poll."
 					},
 					"response": []
 				},
 				{
-					"name": "Campus Buzz",
+					"name": "Get Campus Buzz",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/buzz",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"buzz"
-							]
-						}
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "buzz"]
+						},
+						"description": "Returns the latest 10 campus buzz items (id, text, created_at) from the campus_buzz table."
 					},
 					"response": []
 				},
 				{
-					"name": "Live Events",
+					"name": "Get Live Events",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/live",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"live"
-							]
-						}
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "live"]
+						},
+						"description": "Returns summary of all live events (posts where type = 'live'): id, title, subtitle, participant count, image URL."
 					},
 					"response": []
 				},
 				{
-					"name": "Live Event by ID",
+					"name": "Get Live Event by ID",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/live/:id",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"live",
-								":id"
-							],
-							"variable": [
-								{
-									"key": "id",
-									"value": ""
-								}
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Users",
-			"item": [
-				{
-					"name": "Get Current User",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/v1/users/me",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users",
-								"me"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "List Users",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/v1/users",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"users"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Projects",
-			"item": [
-				{
-					"name": "Create Project",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "live", ":id"],
+							"variable": [{ "key": "id", "value": "" }]
 						},
-						"url": {
-							"raw": "{{baseUrl}}/api/v1/projects",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"projects"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "List Projects",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/v1/projects",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"projects"
-							]
-						}
+						"description": "Returns full details of a single live event by ID, using the FeedItem shape."
 					},
 					"response": []
 				}
@@ -300,18 +136,14 @@
 			"listen": "prerequest",
 			"script": {
 				"type": "text/javascript",
-				"exec": [
-					""
-				]
+				"exec": [""]
 			}
 		},
 		{
 			"listen": "test",
 			"script": {
 				"type": "text/javascript",
-				"exec": [
-					""
-				]
+				"exec": [""]
 			}
 		}
 	],

@@ -6,10 +6,13 @@ services:
       - "8080:8080"
     env_file: .env
     environment:
-      DATABASE_URL: postgres://postgres:password@postgres:5432/findr?sslmode=disable
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     restart: unless-stopped
 
   postgres:
@@ -25,6 +28,16 @@ services:
       - ./migrations/applied:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
