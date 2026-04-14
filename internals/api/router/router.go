@@ -27,6 +27,8 @@ func Setup(r *gin.Engine, d *Deps) {
 		authGroup.POST("/verify", authhandlers.VerifyRegistration(d.Pool, d.Redis, d.Log))
 	}
 
+	v1.GET("/registration-options", authhandlers.GetRegistrationOptions())
+
 	v1.GET("/feed", authhandlers.GetFeed(d.Pool, d.Log))
 	v1.GET("/buzz", authhandlers.GetCampusBuzz(d.Pool, d.Log))
 	v1.GET("/live", authhandlers.GetLiveEvents(d.Pool, d.Log))
